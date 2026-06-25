@@ -273,35 +273,132 @@ export default function App() {
     }
     
     try {
-      const response = await fetch(`/api/fetch-external-data?sheetId=${encodeURIComponent(sheetId)}&macroUrl=${encodeURIComponent(macroUrl)}`);
-      if (!response.ok) {
-        throw new Error(`Koneksi ditolak (${response.status})`);
-      }
-      const result = await response.json();
-      
-      if (result.success) {
-        if (result.isJson && result.data) {
-          // Parse and merge rows dynamically from the user's apps script web app
-          const parsed = parseExternalData(result.data);
-          if (parsed.length > 0) {
-            setReports(parsed);
-            setExternalFetchState("success");
-            setExternalMsg(`Visualisasi Terkoneksi: Berhasil menyinkronkan ${parsed.length} baris data real-time dengan Dashboard!`);
-          } else {
-            setReports([]);
-            setExternalFetchState("success");
-            setExternalMsg("Tersambung ke Google Sheet, namun data masih kosong atau format kolom belum dikenal.");
+      let rawData: any = null;
+      let isHtmlPreview = false;
+
+      // 1. Try hitting the API route first (for local dev / Cloud Run)
+      try {
+        const response = await fetch(`/api/fetch-external-data?sheetId=${encodeURIComponent(sheetId)}&macroUrl=${encodeURIComponent(macroUrl)}`);
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.isJson && result.data) {
+             rawData = result.data;
+          } else if (result.htmlPreview) {
+             isHtmlPreview = true;
           }
-        } else if (result.htmlPreview) {
-          // Apps Script returned HTML web page instead of JSON array
-          setExternalFetchState("html-fallback");
-          setExternalMsg("Kombinasi Sukses: Endpoint Google Apps Script aktif merespons web interface.");
-        } else {
-          setExternalFetchState("success");
-          setExternalMsg("Tersambung ke Google Apps Script. Saluran komunikasi siaga.");
         }
+      } catch (e) {
+        console.warn("Server API tidak terjangkau (mungkin di-deploy ke Vercel tanpa backend). Mencoba fetch client-side langsung...");
+      }
+
+      // 2. Client-side fallback (for Vercel/static deployments) if server failed
+      if (!rawData && !isHtmlPreview) {
+        try {
+          // Attempt hitting the macro URL via GET if it returns JSON
+          const macroRes = await fetch(macroUrl);
+          if (macroRes.ok) {
+             const macroText = await macroRes.text();
+             if (macroText.trim().startsWith("<")) {
+                isHtmlPreview = true;
+             } else {
+                try {
+                  rawData = JSON.parse(macroText);
+                } catch(e) {}
+             }
+          }
+        } catch(e) {}
+      }
+
+      // 3. Last Client-side fallback: Fetch Google Sheets CSV directly
+      if (!rawData && !isHtmlPreview) {
+        const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&gid=1391367572`;
+        try {
+          const csvRes = await fetch(csvUrl);
+          if (csvRes.ok) {
+            const csvText = await csvRes.text();
+            if (csvText.trim().toLowerCase().startsWith("<!doctype html") || csvText.trim().toLowerCase().startsWith("<html")) {
+              throw new Error("Google Sheets memerlukan akses Publik (Akses Ditolak).");
+            }
+            
+            // Parse CSV manually
+            const rows: string[][] = [];
+            let currentRow: string[] = [];
+            let currentCell = "";
+            let insideQuotes = false;
+            for (let i = 0; i < csvText.length; i++) {
+              const char = csvText[i];
+              const nextChar = csvText[i + 1];
+              if (char === '"') {
+                if (insideQuotes && nextChar === '"') { currentCell += '"'; i++; }
+                else { insideQuotes = !insideQuotes; }
+              } else if (char === ',' && !insideQuotes) {
+                currentRow.push(currentCell); currentCell = "";
+              } else if ((char === '\n' || char === '\r') && !insideQuotes) {
+                if (char === '\r' && nextChar === '\n') i++;
+                currentRow.push(currentCell); rows.push(currentRow);
+                currentRow = []; currentCell = "";
+              } else {
+                currentCell += char;
+              }
+            }
+            if (currentRow.length > 0 || currentCell !== "") { currentRow.push(currentCell); rows.push(currentRow); }
+
+            if (rows.length > 1) {
+              const headers = rows[0].map(h => String(h).trim().toLowerCase());
+              const dataRows = rows.slice(1);
+              
+              const findIndexByHeader = (aliases: string[]) => headers.findIndex((h) => aliases.some((a) => h.includes(a)));
+              
+              const timeIdx = findIndexByHeader(["timestamp", "tanggal", "waktu"]);
+              const opIdx = findIndexByHeader(["operator", "nama", "petugas"]);
+              const alsIdx = findIndexByHeader(["alsintan", "alat", "mesin"]);
+              const locIdx = findIndexByHeader(["kecamatan", "lokasi", "desa"]);
+              const luasIdx = findIndexByHeader(["luas", "hektar", "lahan"]);
+              const komIdx = findIndexByHeader(["komoditas", "tanaman", "kelompok"]);
+              const bbmIdx = findIndexByHeader(["bbm", "bensin", "solar", "bahan bakar"]);
+              const dok1Idx = findIndexByHeader(["dokumentasi kegiatan"]);
+              const dok2Idx = findIndexByHeader(["dokumen pendukung"]);
+              
+              rawData = dataRows.map((rowArr) => {
+                const getVal = (colIdx: number, fallback: string) => {
+                  if (colIdx >= 0 && rowArr[colIdx]) return rowArr[colIdx];
+                  return fallback;
+                };
+                return {
+                  "Timestamp": getVal(timeIdx, ""),
+                  "Operator Alsintan ": getVal(opIdx, "Operator Umum"),
+                  "Jenis Alsintan ": getVal(alsIdx, "Yanmar TR2"),
+                  "Lokasi ": getVal(locIdx, "Amanuban Selatan"),
+                  "Luas Lahan (Ha)": getVal(luasIdx, ""),
+                  "komoditas": getVal(komIdx, ""),
+                  "Jumlah Bahan Bakar (L)": getVal(bbmIdx, ""),
+                  "Dokumentasi  Kegiatan": getVal(dok1Idx, ""),
+                  "Dokumen Pendukung Kegiatan ": getVal(dok2Idx, "")
+                };
+              });
+            }
+          }
+        } catch (e: any) {
+           throw new Error(e.message || "Gagal mengambil data dari Google Sheet");
+        }
+      }
+
+      if (rawData) {
+        const parsed = parseExternalData(rawData);
+        if (parsed.length > 0) {
+          setReports(parsed);
+          setExternalFetchState("success");
+          setExternalMsg(`Visualisasi Terkoneksi: Berhasil menyinkronkan ${parsed.length} baris data real-time dengan Dashboard!`);
+        } else {
+          setReports([]);
+          setExternalFetchState("success");
+          setExternalMsg("Tersambung ke Google Sheet, namun data masih kosong atau format kolom belum dikenal.");
+        }
+      } else if (isHtmlPreview) {
+        setExternalFetchState("html-fallback");
+        setExternalMsg("Kombinasi Sukses: Endpoint aktif, namun memerlukan konfigurasi untuk merespons JSON.");
       } else {
-        throw new Error(result.error || "Gagal mengolah respons.");
+        throw new Error("Format data tidak dikenal atau sumber data kosong.");
       }
     } catch (err: any) {
       console.warn("Koneksi eksternal gagal mendeteksi baris mentah:", err.message);
