@@ -487,8 +487,12 @@ export default function App() {
           if (item[k] !== undefined && item[k] !== null && item[k] !== "") {
             return item[k];
           }
-          // lowercase match
-          const itemKeyLower = Object.keys(item).find(key => key.toLowerCase() === k.toLowerCase());
+          // lowercase match or includes
+          const itemKeyLower = Object.keys(item).find(key => 
+            key.toLowerCase() === k.toLowerCase() || 
+            key.toLowerCase().includes(k.toLowerCase()) || 
+            k.toLowerCase().includes(key.toLowerCase())
+          );
           if (itemKeyLower && item[itemKeyLower] !== undefined && item[itemKeyLower] !== null && item[itemKeyLower] !== "") {
             return item[itemKeyLower];
           }
@@ -499,13 +503,13 @@ export default function App() {
       return {
         id: item.id || `ext-${idx}-${Date.now()}`,
         timestamp: String(findVal(["timestamp", "Tanggal", "tanggal", "waktu", "date"], getTTSLocalTime())),
-        operator: String(findVal(["operator", "Operator", "Nama", "nama", "petugas"], "Operator Lapangan")),
-        alsintan: String(findVal(["alsintan", "Alsintan", "alat", "mesin"], "Traktor Roda 2 (Yanmar)")),
-        kecamatan: String(findVal(["kecamatan", "Kecamatan", "wilayah"], "Amanuban Selatan")),
+        operator: String(findVal(["operator", "Operator", "Nama", "nama", "petugas", "operator alsintan"], "Operator Lapangan")),
+        alsintan: String(findVal(["alsintan", "Alsintan", "alat", "mesin", "jenis alsintan"], "Traktor Roda 2 (Yanmar)")),
+        kecamatan: String(findVal(["kecamatan", "Kecamatan", "wilayah", "lokasi"], "Amanuban Selatan")),
         desa: String(findVal(["desa", "Desa", "kelurahan"], "Bena")),
         luasLahan: Number(findVal(["luasLahan", "luas", "Luas", "hektar", "lahan"], 1.5)),
         komoditas: String(findVal(["komoditas", "Komoditas", "tanaman"], "Padi Sawah")),
-        bensin: Number(findVal(["bensin", "Bbm", "bbm", "solar", "bahanbakar", "BahanBakar"], 18)),
+        bensin: Number(findVal(["bensin", "Bbm", "bbm", "solar", "bahanbakar", "bahan bakar"], 18)),
         status: "Tersingkronisasi"
       };
     });
