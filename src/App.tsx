@@ -21,13 +21,18 @@ export default function App() {
   const [reports, setReports] = useState<AlsintanReportRow[]>(() => {
     const saved = localStorage.getItem("tts_alsintan_reports");
     if (saved) {
+      if (saved.includes("Yosep Nome") && saved.includes("Marthen Selan")) {
+        console.log("Mendeteksi data siluman (mock) dari localStorage saat init, mengosongkannya...");
+        localStorage.removeItem("tts_alsintan_reports");
+        return [];
+      }
       try {
         return JSON.parse(saved);
       } catch (e) {
         console.error("Gagal membaca cache laporan lokal:", e);
       }
     }
-    return initialReports;
+    return [];
   });
 
   const [lastSyncedTime, setLastSyncedTime] = useState<string>(() => {
