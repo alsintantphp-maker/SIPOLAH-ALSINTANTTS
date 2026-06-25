@@ -1,0 +1,8 @@
+{
+  "name": "Remix: Remix: Remix: Remix: Remix: Remix: Remix: Remix: Dashboard Optimalisasi Pelaporan Alsintan TTS",
+  "description": "Dashboard web penasihat AI untuk optimalisasi sistem pelaporan berbasis Google Sheet mengenai hasil olah lahan menggunakan Alsintan Dinas Kabupaten Timor Tengah Selatan.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
