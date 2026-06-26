@@ -1,5 +1,5 @@
-import React from "react";
-import { ExternalLink, FileSpreadsheet, Upload, CheckCircle2, FileText, AlertCircle } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { ExternalLink, FileSpreadsheet, Upload, CheckCircle2, FileText, AlertCircle, RefreshCw } from "lucide-react";
 import { AlsintanReportRow } from "../types";
 
 interface Props {
@@ -8,14 +8,58 @@ interface Props {
 
 export default function DokumenPendukungForm({ reports }: Props) {
   const formUrl = "https://docs.google.com/forms/d/e/1FAIpQLSehb55CDTZ_Lyim4HmtNLIsgouPvD8tI1OEzZthkARzJvOPhw/viewform?usp=dialog";
-  const targetSheetLink = "https://docs.google.com/spreadsheets/d/15uUmtI5CDwUw6FpvPyshOR2v9zoDXDxp-3a_D5al7C4/edit?resourcekey=&gid=1391367572#gid=1391367572";
   
   const totalLaporan = reports.length;
-  // Menghitung jumlah laporan yang memiliki bukti dukung (dokumenPendukung atau dokumentasiKegiatan tidak kosong)
-  const totalBuktiDukung = reports.filter(r => 
-    (r.dokumenPendukung && r.dokumenPendukung.trim() !== '') || 
-    (r.dokumentasiKegiatan && r.dokumentasiKegiatan.trim() !== '')
-  ).length;
+  
+  const [totalBuktiDukung, setTotalBuktiDukung] = useState<number>(0);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    
+    const fetchBuktiDukungCount = async () => {
+      try {
+        setIsLoading(true);
+        setErrorMsg(null);
+        // Using Google Visualization API to fetch CSV format of the sheet
+        const response = await fetch("https://docs.google.com/spreadsheets/d/1BP6SwS3EEhmqOWIlhhXWrScH24mIhf1UuNR0pvfQIJM/gviz/tq?tqx=out:csv&gid=1881961917");
+        if (!response.ok) {
+          throw new Error("Gagal mengambil data Spreadsheet");
+        }
+        
+        const csvText = await response.text();
+        // Simple CSV parser: split by newlines, minus 1 for header row
+        const lines = csvText.split(/\r?\n/).filter(line => line.trim() !== "");
+        
+        if (isMounted) {
+          // If there's a header row, we subtract 1. If it's totally empty, count is 0.
+          const count = lines.length > 1 ? lines.length - 1 : 0;
+          setTotalBuktiDukung(count);
+          setIsLoading(false);
+        }
+      } catch (err) {
+        console.error("Error fetching bukti dukung:", err);
+        if (isMounted) {
+          setErrorMsg("Gagal memuat jumlah data");
+          setIsLoading(false);
+          
+          // Fallback to local reports
+          const fallbackCount = reports.filter(r => 
+            (r.dokumenPendukung && r.dokumenPendukung.trim() !== '') || 
+            (r.dokumentasiKegiatan && r.dokumentasiKegiatan.trim() !== '')
+          ).length;
+          setTotalBuktiDukung(fallbackCount);
+        }
+      }
+    };
+    
+    fetchBuktiDukungCount();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [reports]);
 
   const percentage = totalLaporan > 0 ? Math.round((totalBuktiDukung / totalLaporan) * 100) : 0;
   
@@ -45,25 +89,34 @@ export default function DokumenPendukungForm({ reports }: Props) {
             <CheckCircle2 className="w-20 h-20" />
           </div>
           <span className="text-sm font-semibold text-emerald-700 mb-1 z-10">Bukti Dukung Terupload</span>
-          <span className="text-4xl font-black text-emerald-600 z-10">{totalBuktiDukung}</span>
+          <div className="text-4xl font-black text-emerald-600 z-10 flex items-center justify-center gap-2">
+            {isLoading ? (
+              <RefreshCw className="w-8 h-8 text-emerald-600 animate-spin" />
+            ) : (
+              <span>{totalBuktiDukung}</span>
+            )}
+          </div>
+          {errorMsg && (
+            <span className="text-[10px] text-amber-600 z-10 mt-1 absolute bottom-2">{errorMsg}</span>
+          )}
         </div>
       </div>
       
       <div className="w-full max-w-2xl px-6 mb-10">
         <div className="flex justify-between text-xs font-bold mb-2">
           <span className="text-slate-500">Progres Kelengkapan</span>
-          <span className={percentage === 100 ? "text-emerald-600" : "text-amber-500"}>{percentage}%</span>
+          <span className={percentage >= 100 ? "text-emerald-600" : "text-amber-500"}>{Math.min(percentage, 100)}%</span>
         </div>
         <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden border border-slate-200">
           <div 
-            className={`h-3 rounded-full transition-all duration-1000 ${percentage === 100 ? 'bg-emerald-500' : 'bg-amber-400'}`} 
-            style={{ width: `${percentage}%` }}
+            className={`h-3 rounded-full transition-all duration-1000 ${percentage >= 100 ? 'bg-emerald-500' : 'bg-amber-400'}`} 
+            style={{ width: `${Math.min(percentage, 100)}%` }}
           ></div>
         </div>
         {percentage < 100 && totalLaporan > 0 && (
           <p className="text-xs text-amber-600 mt-3 flex items-center gap-1.5 font-medium justify-center">
             <AlertCircle className="w-3.5 h-3.5" />
-            Terdapat {totalLaporan - totalBuktiDukung} laporan yang belum memiliki bukti dukung.
+            Terdapat {totalLaporan > totalBuktiDukung ? totalLaporan - totalBuktiDukung : 0} laporan yang belum memiliki bukti dukung.
           </p>
         )}
       </div>
