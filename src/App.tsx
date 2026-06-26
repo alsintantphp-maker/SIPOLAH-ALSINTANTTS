@@ -356,6 +356,8 @@ export default function App() {
               const luasIdx = findIndexByHeader(["luas", "hektar", "lahan"]);
               const komIdx = findIndexByHeader(["komoditas", "tanaman", "kelompok"]);
               const bbmIdx = findIndexByHeader(["bbm", "bensin", "solar", "bahan bakar"]);
+              const durasiIdx = findIndexByHeader(["durasi", "hari"]);
+              const biayaIdx = findIndexByHeader(["biaya", "sewa", "retribusi", "rp"]);
               const dok1Idx = findIndexByHeader(["dokumentasi kegiatan"]);
               const dok2Idx = findIndexByHeader(["dokumen pendukung"]);
               
@@ -372,6 +374,8 @@ export default function App() {
                   "Luas Lahan (Ha)": getVal(luasIdx, ""),
                   "komoditas": getVal(komIdx, ""),
                   "Jumlah Bahan Bakar (L)": getVal(bbmIdx, ""),
+                  "Durasi Kerja (Hari)": getVal(durasiIdx, ""),
+                  "Biaya Sewa (Rp)": getVal(biayaIdx, ""),
                   "Dokumentasi  Kegiatan": getVal(dok1Idx, ""),
                   "Dokumen Pendukung Kegiatan ": getVal(dok2Idx, "")
                 };
@@ -455,6 +459,20 @@ export default function App() {
       const komIdx = findIndexByHeader(["komoditas", "tanaman"]);
       const bbmIdx = findIndexByHeader(["bbm", "bensin", "solar", "bahan bakar"]);
       const dateIdx = findIndexByHeader(["tanggal", "timestamp", "waktu"]);
+      const durasiIdx = findIndexByHeader(["durasi", "hari"]);
+      const biayaIdx = findIndexByHeader(["biaya", "sewa", "retribusi", "rp"]);
+
+      const parseLuasLahan = (val: any): number => {
+        if (typeof val === 'number') return val;
+        if (!val) return 1.5;
+        const str = String(val).toLowerCase().trim();
+        let num = parseFloat(str.replace(/,/g, '.').replace(/[^0-9.]/g, ''));
+        if (isNaN(num)) return 1.5;
+        if (str.includes('are')) {
+          num = num / 100; // 1 Hectare = 100 Are
+        }
+        return num;
+      };
 
       return rows.map((row: any[], idx: number) => {
         const getVal = (cellIdx: number, fallback: any) => {
@@ -471,9 +489,11 @@ export default function App() {
           alsintan: String(getVal(alsIdx, "Traktor Roda 2 (Yanmar)")),
           kecamatan: String(getVal(kecIdx, "Amanuban Selatan")),
           desa: String(getVal(desIdx, "Bena")),
-          luasLahan: Number(getVal(luasIdx, 1.5)),
+          luasLahan: parseLuasLahan(getVal(luasIdx, "1.5")),
           komoditas: String(getVal(komIdx, "Padi Sawah")),
           bensin: Number(getVal(bbmIdx, 18)),
+          durasiKerja: durasiIdx !== -1 ? Number(getVal(durasiIdx, 0)) : undefined,
+          biayaSewa: biayaIdx !== -1 ? Number(getVal(biayaIdx, 0).toString().replace(/[^0-9]/g, '')) : undefined,
           status: "Tersingkronisasi"
         };
       });
@@ -500,6 +520,18 @@ export default function App() {
         return fallback;
       };
 
+      const parseLuasLahanObj = (val: any): number => {
+        if (typeof val === 'number') return val;
+        if (!val) return 1.5;
+        const str = String(val).toLowerCase().trim();
+        let num = parseFloat(str.replace(/,/g, '.').replace(/[^0-9.]/g, ''));
+        if (isNaN(num)) return 1.5;
+        if (str.includes('are')) {
+          num = num / 100; // 1 Hectare = 100 Are
+        }
+        return num;
+      };
+
       return {
         id: item.id || `ext-${idx}-${Date.now()}`,
         timestamp: String(findVal(["timestamp", "Tanggal", "tanggal", "waktu", "date"], getTTSLocalTime())),
@@ -507,9 +539,14 @@ export default function App() {
         alsintan: String(findVal(["alsintan", "Alsintan", "alat", "mesin", "jenis alsintan"], "Traktor Roda 2 (Yanmar)")),
         kecamatan: String(findVal(["kecamatan", "Kecamatan", "wilayah", "lokasi"], "Amanuban Selatan")),
         desa: String(findVal(["desa", "Desa", "kelurahan"], "Bena")),
-        luasLahan: Number(findVal(["luasLahan", "luas", "Luas", "hektar", "lahan"], 1.5)),
+        luasLahan: parseLuasLahanObj(findVal(["luasLahan", "luas", "Luas", "hektar", "lahan"], 1.5)),
         komoditas: String(findVal(["komoditas", "Komoditas", "tanaman"], "Padi Sawah")),
         bensin: Number(findVal(["bensin", "Bbm", "bbm", "solar", "bahanbakar", "bahan bakar"], 18)),
+        durasiKerja: item.durasiKerja !== undefined ? Number(item.durasiKerja) : 
+                     findVal(["durasi", "hari", "Durasi", "Hari"], undefined) ? Number(findVal(["durasi", "hari", "Durasi", "Hari"], 0)) : undefined,
+        biayaSewa: item.biayaSewa !== undefined ? Number(item.biayaSewa) :
+                   findVal(["biaya", "sewa", "retribusi", "rp", "Biaya", "Sewa"], undefined) ? 
+                   Number(findVal(["biaya", "sewa", "retribusi", "rp", "Biaya", "Sewa"], 0).toString().replace(/[^0-9]/g, '')) : undefined,
         status: "Tersingkronisasi"
       };
     });
@@ -684,6 +721,9 @@ export default function App() {
         onSheetIdChange={setSheetId}
         userEmail={userEmail}
         onUserEmailChange={setUserEmail}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        reportsLength={reports.length}
       />
 
       <main className="max-w-7xl w-full mx-auto px-6 py-6 space-y-6 flex-1">
@@ -735,7 +775,7 @@ export default function App() {
         </div>
 
         {/* Navigation & Toggle View Bar */}
-        <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center bg-white p-3 border border-slate-200 rounded-2xl gap-3 shadow-xs">
+        <div className="hidden xl:flex flex-col xl:flex-row justify-between items-start xl:items-center bg-white p-3 border border-slate-200 rounded-2xl gap-3 shadow-xs">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-slate-800 font-extrabold text-xs uppercase tracking-wider mr-1">Dashboard Menu:</span>
             <div className="flex flex-wrap bg-slate-100 p-1 rounded-xl gap-1">

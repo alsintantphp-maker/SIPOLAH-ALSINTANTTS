@@ -7,14 +7,15 @@ interface RealTimeChartsProps {
   reports: AlsintanReportRow[];
 }
 
-// Regional official tariffs for rental/operating services (per Hectare) in Timor Tengah Selatan (TTS)
+// Regional official tariffs for rental/operating services in Timor Tengah Selatan (TTS)
 export const getAlsintanTariff = (name: string): number => {
   const norm = name.toLowerCase();
-  if (norm.includes("roda 4") || norm.includes("john deere")) return 350000; // Rp 350.000 / Ha
+  if (norm.includes("roda 4") || norm.includes("john deere")) return 1500000; // Rp 15.000 / Are = Rp 1.500.000 / Ha
   if (norm.includes("roda 2") || norm.includes("yanmar")) return 250000;    // Rp 250.000 / Ha
   if (norm.includes("pompa")) return 150000;                                 // Rp 150.000 / Ha
   if (norm.includes("cultivator")) return 180000;                            // Rp 180.000 / Ha
   if (norm.includes("harvester") || norm.includes("combine")) return 300000; // Rp 300.000 / Ha
+  if (norm.includes("ekskavator") || norm.includes("excavator")) return 2000000; // Rp 2.000.000 / Hari
   return 200000; // Default standard rate
 };
 
@@ -37,7 +38,7 @@ export default function RealTimeCharts({ reports }: RealTimeChartsProps) {
     if (!operatorMap[name]) {
       operatorMap[name] = { hectares: 0, count: 0 };
     }
-    operatorMap[name].hectares += row.luasLahan;
+    operatorMap[name].hectares += (row.luasLahan || 0);
     operatorMap[name].count += 1;
   });
 
@@ -51,7 +52,7 @@ export default function RealTimeCharts({ reports }: RealTimeChartsProps) {
   const alsintanHectaresMap: Record<string, number> = {};
   reports.forEach((row) => {
     const key = row.alsintan || "Alsintan Umum";
-    alsintanHectaresMap[key] = (alsintanHectaresMap[key] || 0) + row.luasLahan;
+    alsintanHectaresMap[key] = (alsintanHectaresMap[key] || 0) + (row.luasLahan || 0);
   });
 
   const alsintanHectaresData = Object.entries(alsintanHectaresMap).map(([name, value]) => ({
@@ -59,21 +60,36 @@ export default function RealTimeCharts({ reports }: RealTimeChartsProps) {
     hectares: parseFloat(value.toFixed(1)),
   })).sort((a, b) => b.hectares - a.hectares);
 
-  // 3. Process data for: RUPIAH TERCAPAI DARI MASING-MASING ALSINTAN
-  const alsintanRupiahMap: Record<string, { rupiah: number; hectares: number }> = {};
+  // 3. Process data for: RUPIAH TERCAPAI DARI MASING-MASING OPERATOR
+  const operatorRupiahMap: Record<string, { rupiah: number; hectares: number }> = {};
   reports.forEach((row) => {
-    const key = row.alsintan || "Alsintan Umum";
-    const tariff = getAlsintanTariff(key);
-    const rev = row.luasLahan * tariff;
+    const operator = row.operator || "Operator Tidak Dikenal";
+    const alsintan = row.alsintan || "Alsintan Umum";
+    let rev = 0;
     
-    if (!alsintanRupiahMap[key]) {
-      alsintanRupiahMap[key] = { rupiah: 0, hectares: 0 };
+    // Check if the Google Sheet provided a predefined rental cost "biayaSewa"
+    if (row.biayaSewa !== undefined && !isNaN(row.biayaSewa) && row.biayaSewa > 0) {
+      rev = row.biayaSewa;
+    } else {
+      const tariff = getAlsintanTariff(alsintan);
+      if (alsintan.toLowerCase().includes("ekskavator") || alsintan.toLowerCase().includes("excavator")) {
+        // Based on durasiKerja (Hari)
+        const hari = row.durasiKerja || 1; 
+        rev = hari * tariff;
+      } else {
+        // Based on luasLahan (Ha)
+        rev = (row.luasLahan || 0) * tariff;
+      }
     }
-    alsintanRupiahMap[key].rupiah += rev;
-    alsintanRupiahMap[key].hectares += row.luasLahan;
+    
+    if (!operatorRupiahMap[operator]) {
+      operatorRupiahMap[operator] = { rupiah: 0, hectares: 0 };
+    }
+    operatorRupiahMap[operator].rupiah += rev;
+    operatorRupiahMap[operator].hectares += (row.luasLahan || 0);
   });
 
-  const alsintanRupiahData = Object.entries(alsintanRupiahMap).map(([name, stats]) => ({
+  const operatorRupiahData = Object.entries(operatorRupiahMap).map(([name, stats]) => ({
     name,
     rupiah: stats.rupiah,
     hectares: parseFloat(stats.hectares.toFixed(1)),
@@ -175,7 +191,7 @@ export default function RealTimeCharts({ reports }: RealTimeChartsProps) {
               </span>
               <div className="space-y-0.5">
                 <h3 className="text-xs font-bold text-slate-800 uppercase tracking-tight">
-                  Per Alsintan Sudah Berapa Hectar
+                  Per Alsintan Sudah Berapa Hektar
                 </h3>
                 <p className="text-[11px] text-slate-400 font-medium">Akumulasi luasan tanah garapan dalam satuan Hektar (Ha)</p>
               </div>
@@ -190,7 +206,7 @@ export default function RealTimeCharts({ reports }: RealTimeChartsProps) {
                     <div key={item.name} className="space-y-1.5">
                       <div className="flex justify-between items-center text-xs font-semibold text-slate-700">
                         <span className="truncate max-w-[70%]">{item.name}</span>
-                        <span className="font-mono font-bold text-slate-800">{item.hectares} Hektar</span>
+                        <span className="font-mono font-bold text-slate-800">{item.hectares} Ha</span>
                       </div>
                       <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden flex">
                         <div
@@ -216,8 +232,8 @@ export default function RealTimeCharts({ reports }: RealTimeChartsProps) {
           </div>
         </div>
 
-        {/* SECTION 3: RUPIAH TERCAPAI DARI MASING-MASING ALSINTAN */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs flex flex-col justify-between min-h-[400px]" id="rupiah-per-alsintan">
+        {/* SECTION 3: RUPIAH TERCAPAI DARI MASING-MASING PETUGAS/OPERATOR */}
+        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs flex flex-col justify-between min-h-[400px]" id="rupiah-per-operator">
           <div>
             <div className="flex items-center gap-2 pb-3 border-b border-slate-100 mb-4">
               <span className="p-1.5 bg-emerald-50 text-emerald-700 rounded-lg">
@@ -225,16 +241,15 @@ export default function RealTimeCharts({ reports }: RealTimeChartsProps) {
               </span>
               <div className="space-y-0.5">
                 <h3 className="text-xs font-bold text-slate-800 uppercase tracking-tight">
-                  Rupiah Tercapai Dari Masing-Masing Alsintan
+                  Rupiah Tercapai Dari Masing-Masing Petugas
                 </h3>
-                <p className="text-[11px] text-slate-400 font-medium">Pencapaian PNBP / Retribusi daerah berdasarkan luas olah jasa alat</p>
+                <p className="text-[11px] text-slate-400 font-medium">Pencapaian PNBP / Retribusi daerah berdasarkan hasil kerja petugas</p>
               </div>
             </div>
 
             <div className="space-y-3.5">
-              {alsintanRupiahData.length > 0 ? (
-                alsintanRupiahData.map((item, idx) => {
-                  const ratePerHa = getAlsintanTariff(item.name);
+              {operatorRupiahData.length > 0 ? (
+                operatorRupiahData.map((item, idx) => {
                   return (
                     <div 
                       key={item.name} 
@@ -246,7 +261,7 @@ export default function RealTimeCharts({ reports }: RealTimeChartsProps) {
                           <span className="text-xs font-bold text-slate-800 truncate">{item.name}</span>
                         </div>
                         <div className="text-[10px] text-slate-500 font-semibold">
-                          Retribusi Acuan: {formatRupiah(ratePerHa)} / Hektar
+                          Total Volume Kerja
                         </div>
                       </div>
 
@@ -269,11 +284,16 @@ export default function RealTimeCharts({ reports }: RealTimeChartsProps) {
             </div>
           </div>
 
-          <div className="bg-emerald-50 text-emerald-950 p-2.5 rounded-xl border border-emerald-100 text-[10px] flex items-center justify-between mt-4">
-            <span className="font-semibold block">Total Retribusi Terkumpul:</span>
-            <span className="font-mono font-bold text-xs">
-              {formatRupiah(alsintanRupiahData.reduce((sum, item) => sum + item.rupiah, 0))}
-            </span>
+          <div className="mt-4">
+            <div className="bg-emerald-50 text-emerald-950 p-2.5 rounded-xl border border-emerald-100 text-[10px] flex items-center justify-between mb-2">
+              <span className="font-semibold block">Total Retribusi Terkumpul:</span>
+              <span className="font-mono font-bold text-xs">
+                {formatRupiah(operatorRupiahData.reduce((sum, item) => sum + item.rupiah, 0))}
+              </span>
+            </div>
+            <p className="text-[9px] text-slate-400 font-medium leading-relaxed">
+              *Retribusi Acuan: Rp 1.500.000 / Hektar untuk Traktor Roda 4 dan Rp.2.000.000 / Hari untuk Ekskavator.
+            </p>
           </div>
         </div>
 

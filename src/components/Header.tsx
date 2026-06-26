@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Database, FileSpreadsheet, RefreshCw, Layers, CheckCircle, AlertTriangle, ShieldCheck, User } from "lucide-react";
+import { Database, FileSpreadsheet, RefreshCw, Layers, CheckCircle, AlertTriangle, ShieldCheck, User, Menu, X, LayoutDashboard, ClipboardEdit, Upload, FileText, PhoneCall } from "lucide-react";
 
 interface HeaderProps {
   onSyncAll: () => void;
@@ -10,6 +10,9 @@ interface HeaderProps {
   onSheetIdChange: (newId: string) => void;
   userEmail: string;
   onUserEmailChange: (email: string) => void;
+  activeTab: string;
+  setActiveTab: (tab: "dashboard" | "input-manual" | "dok-pendukung" | "google-form" | "spreadsheet" | "hubungi-petugas") => void;
+  reportsLength: number;
 }
 
 export default function Header({ 
@@ -20,10 +23,14 @@ export default function Header({
   sheetId,
   onSheetIdChange,
   userEmail,
-  onUserEmailChange
+  onUserEmailChange,
+  activeTab,
+  setActiveTab,
+  reportsLength
 }: HeaderProps) {
   const [isEditingId, setIsEditingId] = useState(false);
   const [isAddingUser, setIsAddingUser] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [newUserEmail, setNewUserEmail] = useState("");
   const [userList, setUserList] = useState<string[]>(() => {
     const list = localStorage.getItem("tts_alsintan_users");
@@ -48,14 +55,14 @@ export default function Header({
   const isAuthorized = userEmail.trim().toLowerCase() === "bahrunalfazari@gmail.com";
 
   return (
-    <header className="bg-white border-b border-slate-200 shadow-sm" id="dashboard-header">
+    <header className="bg-white border-b border-slate-200 shadow-sm relative z-50" id="dashboard-header">
       {/* Top Banner (Government agricultural branding) */}
       <div className="bg-emerald-950 text-emerald-100 px-6 py-2 flex flex-col sm:flex-row justify-between items-start sm:items-center text-xs border-b border-emerald-950 gap-2">
         <div className="flex items-center gap-2">
           <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
           <span className="font-semibold tracking-wider uppercase">Portal Resmi Alsintan</span>
-          <span className="text-emerald-400">|</span>
-          <span>Dinas Tanaman Pangan, Hortikultura dan Perkebunan Kabupaten Timor Tengah Selatan (TTS)</span>
+          <span className="text-emerald-400 hidden sm:inline">|</span>
+          <span className="hidden sm:inline">Dinas Tanaman Pangan, Hortikultura dan Perkebunan Kabupaten Timor Tengah Selatan (TTS)</span>
         </div>
         <div className="flex flex-wrap items-center gap-2.5">
           <div className="flex items-center gap-1.5 bg-emerald-900 px-2 py-1 rounded border border-emerald-800">
@@ -122,11 +129,17 @@ export default function Header({
         </div>
       </div>
 
-      {/* Main Bar */}
-      <div className="max-w-7xl mx-auto px-6 py-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+
+      <div className="max-w-7xl mx-auto px-6 py-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative">
         {/* Title and agency emblem mockup */}
         <div className="flex items-start gap-3">
-          <div className="bg-emerald-100 text-emerald-800 p-2.5 rounded-xl border border-emerald-200 shadow-inner flex items-center justify-center">
+          <button 
+            className="xl:hidden bg-white text-slate-800 p-2.5 rounded-xl border border-slate-200 shadow-inner flex items-center justify-center hover:bg-slate-50 focus:outline-none"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          >
+            {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
+          <div className="bg-emerald-100 text-emerald-800 p-2.5 rounded-xl border border-emerald-200 shadow-inner flex items-center justify-center hidden sm:flex">
             <Layers className="w-8 h-8" />
           </div>
           <div>
@@ -214,6 +227,62 @@ export default function Header({
           </button>
         </div>
       </div>
+
+      {/* Mobile Menu Dropdown */}
+      {isMobileMenuOpen && (
+        <div className="xl:hidden bg-white border-b border-slate-200 p-4 shadow-md absolute w-full left-0 top-full bg-white z-50">
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={() => { setActiveTab("dashboard"); setIsMobileMenuOpen(false); }}
+              className={`p-3 rounded-xl text-sm font-bold flex items-center gap-3 ${
+                activeTab === "dashboard" ? "bg-emerald-50 text-emerald-800" : "text-slate-600"
+              }`}
+            >
+              <LayoutDashboard className="w-5 h-5" /> Ikhtisar & Optimasi AI
+            </button>
+            <button
+              onClick={() => { setActiveTab("input-manual"); setIsMobileMenuOpen(false); }}
+              className={`p-3 rounded-xl text-sm font-bold flex items-center gap-3 ${
+                activeTab === "input-manual" ? "bg-emerald-50 text-emerald-800" : "text-slate-600"
+              }`}
+            >
+              <ClipboardEdit className="w-5 h-5" /> Menu Input
+            </button>
+            <button
+              onClick={() => { setActiveTab("dok-pendukung"); setIsMobileMenuOpen(false); }}
+              className={`p-3 rounded-xl text-sm font-bold flex items-center gap-3 ${
+                activeTab === "dok-pendukung" ? "bg-emerald-50 text-emerald-800" : "text-slate-600"
+              }`}
+            >
+              <Upload className="w-5 h-5" /> Menu Dok Pendukung
+            </button>
+            <button
+              onClick={() => { setActiveTab("google-form"); setIsMobileMenuOpen(false); }}
+              className={`p-3 rounded-xl text-sm font-bold flex items-center gap-3 ${
+                activeTab === "google-form" ? "bg-emerald-50 text-emerald-800" : "text-slate-600"
+              }`}
+            >
+              <FileText className="w-5 h-5" /> Input Google Form / Apps Script
+            </button>
+            <button
+              onClick={() => { setActiveTab("spreadsheet"); setIsMobileMenuOpen(false); }}
+              className={`p-3 rounded-xl text-sm font-bold flex items-center gap-3 ${
+                activeTab === "spreadsheet" ? "bg-emerald-50 text-emerald-800" : "text-slate-600"
+              }`}
+            >
+              <FileSpreadsheet className="w-5 h-5" /> Grid Google Sheets ({reportsLength})
+            </button>
+            <button
+              onClick={() => { setActiveTab("hubungi-petugas"); setIsMobileMenuOpen(false); }}
+              className={`p-3 rounded-xl text-sm font-bold flex items-center gap-3 ${
+                activeTab === "hubungi-petugas" ? "bg-emerald-50 text-emerald-800" : "text-slate-600"
+              }`}
+            >
+              <PhoneCall className="w-5 h-5" /> Hubungi Petugas
+            </button>
+          </div>
+        </div>
+      )}
     </header>
   );
 }

@@ -10,6 +10,8 @@ export interface AlsintanReportRow {
   luasLahan: number; // Hektar
   komoditas: string;
   bensin: number; // Liter
+  durasiKerja?: number; // Hari
+  biayaSewa?: number; // Rupiah (dari google sheet jika ada)
   status: "Tersingkronisasi" | "Perlu Sinkronisasi" | "Verifikasi Tertunda";
   dokumentasiKegiatan?: string;
   dokumenPendukung?: string;
