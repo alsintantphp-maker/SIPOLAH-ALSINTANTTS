@@ -1,158 +1,84 @@
-import React, { useState } from "react";
-import { 
-  FileText, ExternalLink, Loader2, FileSpreadsheet, Info, AlertCircle, Sparkles, BookOpen 
-} from "lucide-react";
+import React from "react";
+import { ExternalLink, FileSpreadsheet, Upload, CheckCircle2, FileText, AlertCircle } from "lucide-react";
+import { AlsintanReportRow } from "../types";
 
-export default function DokumenPendukungForm() {
-  const formUrl = "https://docs.google.com/forms/d/e/1FAIpQLSfG3bfMAfIKI4ibuRfzUiTvQUkwRwyBDCe3PNFqh8LtQ06aaw/viewform?usp=dialog";
-  const targetSheetLink = "https://docs.google.com/spreadsheets/d/1nrvmGZy63mufsRJJJvXtr_Q5VnOkSs1vgIrV7lLk2Tw/edit?usp=sharing";
+interface Props {
+  reports: AlsintanReportRow[];
+}
+
+export default function DokumenPendukungForm({ reports }: Props) {
+  const formUrl = "https://docs.google.com/forms/d/e/1FAIpQLSehb55CDTZ_Lyim4HmtNLIsgouPvD8tI1OEzZthkARzJvOPhw/viewform?usp=dialog";
+  const targetSheetLink = "https://docs.google.com/spreadsheets/d/15uUmtI5CDwUw6FpvPyshOR2v9zoDXDxp-3a_D5al7C4/edit?resourcekey=&gid=1391367572#gid=1391367572";
   
-  const [iframeLoaded, setIframeLoaded] = useState(false);
+  const totalLaporan = reports.length;
+  // Menghitung jumlah laporan yang memiliki bukti dukung (dokumenPendukung atau dokumentasiKegiatan tidak kosong)
+  const totalBuktiDukung = reports.filter(r => 
+    (r.dokumenPendukung && r.dokumenPendukung.trim() !== '') || 
+    (r.dokumentasiKegiatan && r.dokumentasiKegiatan.trim() !== '')
+  ).length;
 
-  const handleIframeLoad = () => {
-    setIframeLoaded(true);
-  };
-
+  const percentage = totalLaporan > 0 ? Math.round((totalBuktiDukung / totalLaporan) * 100) : 0;
+  
   return (
-    <div className="max-w-6xl mx-auto space-y-6 font-sans" id="dokumen-pendukung-embed-view">
+    <div className="w-full flex flex-col items-center justify-center py-16 bg-white rounded-2xl shadow-sm border border-slate-200" id="dokumen-pendukung-embed-view">
+      <div className="bg-emerald-100 p-4 rounded-full mb-6">
+        <Upload className="w-12 h-12 text-emerald-700" />
+      </div>
       
-      {/* Banner introduction with action links */}
-      <div className="bg-slate-900 text-slate-100 rounded-2xl p-6 border border-slate-800 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] uppercase font-bold text-amber-400 bg-amber-950/80 border border-amber-900 px-2 py-0.5 rounded-full tracking-wider">
-              Google Form Integrator
-            </span>
-            <span className="text-[10px] uppercase font-bold text-slate-300 bg-slate-800 px-2 py-0.5 rounded-full tracking-wider">
-              Dinas KPP Kab. TTS
-            </span>
+      <h2 className="text-xl font-bold text-slate-800 mb-2">Upload Bukti Dukung</h2>
+      <p className="text-sm text-slate-500 mb-8 max-w-md text-center">
+        Silakan klik tombol di bawah ini untuk mengunggah bukti dukung dan melihat daftar dokumen yang telah diunggah.
+      </p>
+
+      {/* Statistik Box */}
+      <div className="flex flex-col sm:flex-row gap-6 mb-10 w-full max-w-2xl px-6 justify-center">
+        <div className="flex-1 bg-slate-50 border border-slate-200 p-5 rounded-2xl flex flex-col items-center justify-center relative overflow-hidden">
+          <div className="absolute -right-4 -top-4 text-slate-100">
+            <FileText className="w-20 h-20" />
           </div>
-          <h2 className="text-base font-extrabold text-white">Portal Upload Dokumen Pendukung & Laporan Fisik</h2>
-          <p className="text-xs text-slate-300 max-w-2xl leading-relaxed">
-            Halaman integrasi Google Form untuk mengupload Dokumen Pendukung Kegiatan (Surat Tugas, Laporan, atau Hasil Lahan). Data foto diupload lewat form ini dan otomatis tersinkron ke <strong>Cell K</strong> di Google Sheet Dinas.
-          </p>
+          <span className="text-sm font-semibold text-slate-500 mb-1 z-10">Total Olah Lahan</span>
+          <span className="text-4xl font-black text-slate-800 z-10">{totalLaporan}</span>
         </div>
-
-        <div className="flex flex-wrap gap-2 shrink-0">
-          <a 
-            href={targetSheetLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-amber-400 rounded-xl text-xs font-bold flex items-center gap-2 transition active:scale-95 border border-slate-700"
-          >
-            <FileSpreadsheet className="w-3.5 h-3.5" />
-            <span>Lihat Google Sheet ↗</span>
-          </a>
-
-          <a 
-            href={formUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-2 transition active:scale-95 shadow-md border border-emerald-500"
-          >
-            <ExternalLink className="w-3.5 h-3.5" />
-            <span>Buka Form (Tab Baru) ↗</span>
-          </a>
-        </div>
-      </div>
-
-      {/* Embedded form frame and tutorials */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         
-        {/* Helper Panel */}
-        <div className="space-y-4 lg:col-span-1">
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4 shadow-2xs">
-            <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5 pb-2.5 border-b border-slate-100">
-              <BookOpen className="w-4 h-4 text-emerald-700" />
-              Petunjuk Upload
-            </h3>
-            
-            <div className="space-y-3.5">
-              <div className="flex gap-3">
-                <span className="w-5 h-5 bg-amber-100 text-amber-800 font-mono text-xs font-bold flex items-center justify-center rounded-full shrink-0">1</span>
-                <p className="text-[11px] text-slate-600 leading-relaxed font-medium">
-                  Isi informasi nama operator, lokasi kecamatan, dan desa pelaporan pada Google Form di sebelah kanan.
-                </p>
-              </div>
-
-              <div className="flex gap-3">
-                <span className="w-5 h-5 bg-amber-100 text-amber-800 font-mono text-xs font-bold flex items-center justify-center rounded-full shrink-0">2</span>
-                <p className="text-[11px] text-slate-600 leading-relaxed font-medium">
-                  Gunakan tombol <strong>"Add File" / "Tambahkan File"</strong> di dalam form untuk mengunggah dokumen pendukung / Surat Tugas Anda.
-                </p>
-              </div>
-
-              <div className="flex gap-3">
-                <span className="w-5 h-5 bg-amber-100 text-amber-800 font-mono text-xs font-bold flex items-center justify-center rounded-full shrink-0">3</span>
-                <p className="text-[11px] text-slate-600 leading-relaxed font-medium">
-                  Tekan <strong>"Submit" / "Kirim"</strong>. Link upload otomatis tercatat di Google Sheet.
-                </p>
-              </div>
-            </div>
+        <div className="flex-1 bg-emerald-50 border border-emerald-100 p-5 rounded-2xl flex flex-col items-center justify-center relative overflow-hidden">
+          <div className="absolute -right-4 -top-4 text-emerald-100">
+            <CheckCircle2 className="w-20 h-20" />
           </div>
-
-          <div className="bg-emerald-50/70 border border-emerald-100/80 rounded-2xl p-4 space-y-2">
-            <h4 className="text-[11px] font-bold text-emerald-800 flex items-center gap-1.5">
-              <Info className="w-4 h-4 text-emerald-700 shrink-0" />
-              Informasi Sinkronisasi
-            </h4>
-            <p className="text-[11px] text-emerald-950 leading-relaxed font-medium">
-              Sistem backend Apps Script akan memetakan tautan Google Drive dari dokumen pendukung yang Anda unggah secara otomatis ke lembar kerja KPP Kabupaten TTS.
-            </p>
-          </div>
-
-          <div className="bg-amber-50/60 border border-amber-100/80 rounded-2xl p-4 space-y-2 text-[11px] text-amber-800">
-            <h4 className="font-bold flex items-center gap-1.5">
-              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-              Kendala Tampilan?
-            </h4>
-            <p className="leading-relaxed font-semibold">
-              Bila form tidak termuat dengan sempurna karena restriksi browser Anda, silakan klik tombol <strong>"Buka Form (Tab Baru)"</strong> di bagian atas layar untuk mengunduh/mengupload langsung via aplikasi Google.
-            </p>
-          </div>
+          <span className="text-sm font-semibold text-emerald-700 mb-1 z-10">Bukti Dukung Terupload</span>
+          <span className="text-4xl font-black text-emerald-600 z-10">{totalBuktiDukung}</span>
         </div>
-
-        {/* Live dynamic Google Form Web interface */}
-        <div className="lg:col-span-3 bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden flex flex-col min-h-[640px]" id="iframe-cabinet-dokumen">
-          
-          <div className="p-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center px-4">
-            <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest flex items-center gap-2">
-              <FileText className="w-4 h-4 text-slate-500" />
-              Formulir Unggah Google (Terintegrasi)
-            </span>
-            <div className="flex items-center gap-1 text-[10px] text-emerald-600 font-mono bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
-              <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
-              Secure Form Link
-            </div>
-          </div>
-
-          <div className="flex-1 relative bg-slate-50 min-h-[580px]">
-            {!iframeLoaded && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center space-y-3 bg-white">
-                <Loader2 className="w-8 h-8 text-emerald-600 animate-spin" />
-                <div>
-                  <h4 className="text-xs font-bold text-slate-700 uppercase">Menghubungkan ke Portal Google Form...</h4>
-                  <p className="text-[11px] text-slate-400 max-w-xs mx-auto mt-0.5">
-                    Harap pastikan koneksi internet stabil saat mengupload file dokumen pendukung.
-                  </p>
-                </div>
-              </div>
-            )}
-
-            <iframe 
-              src={formUrl}
-              className="w-full h-full min-h-[600px] border-none bg-white"
-              onLoad={handleIframeLoad}
-              title="Formulir Operator Google"
-              allow="clipboard-write"
-              referrerPolicy="no-referrer"
-            />
-          </div>
-
-        </div>
-
       </div>
-
+      
+      <div className="w-full max-w-2xl px-6 mb-10">
+        <div className="flex justify-between text-xs font-bold mb-2">
+          <span className="text-slate-500">Progres Kelengkapan</span>
+          <span className={percentage === 100 ? "text-emerald-600" : "text-amber-500"}>{percentage}%</span>
+        </div>
+        <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden border border-slate-200">
+          <div 
+            className={`h-3 rounded-full transition-all duration-1000 ${percentage === 100 ? 'bg-emerald-500' : 'bg-amber-400'}`} 
+            style={{ width: `${percentage}%` }}
+          ></div>
+        </div>
+        {percentage < 100 && totalLaporan > 0 && (
+          <p className="text-xs text-amber-600 mt-3 flex items-center gap-1.5 font-medium justify-center">
+            <AlertCircle className="w-3.5 h-3.5" />
+            Terdapat {totalLaporan - totalBuktiDukung} laporan yang belum memiliki bukti dukung.
+          </p>
+        )}
+      </div>
+      
+      <div className="flex flex-col sm:flex-row gap-4 items-center">
+        <a 
+          href={formUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-sm font-bold transition flex items-center gap-2 shadow-md cursor-pointer w-full sm:w-auto justify-center"
+        >
+          <ExternalLink className="w-5 h-5" />
+          Upload Bukti Dukung (Form)
+        </a>
+      </div>
     </div>
   );
 }

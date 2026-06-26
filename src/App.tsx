@@ -792,18 +792,6 @@ export default function App() {
               </button>
 
               <button
-                onClick={() => setActiveTab("input-manual")}
-                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-                  activeTab === "input-manual"
-                    ? "bg-white text-emerald-950 shadow-xs border border-slate-200/50"
-                    : "text-slate-500 hover:text-slate-800"
-                }`}
-              >
-                <ClipboardEdit className="w-3.5 h-3.5" />
-                Menu Input
-              </button>
-
-              <button
                 onClick={() => setActiveTab("dok-pendukung")}
                 className={`px-4 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
                   activeTab === "dok-pendukung"
@@ -824,7 +812,7 @@ export default function App() {
                 }`}
               >
                 <FileText className="w-3.5 h-3.5" />
-                Input Google Form / Apps Script
+                Lapor Olah Lahan
               </button>
 
               <button
@@ -836,7 +824,7 @@ export default function App() {
                 }`}
               >
                 <FileSpreadsheet className="w-3.5 h-3.5" />
-                Grid Google Sheets ({reports.length})
+                Rekap Laporan Olah Lahan ({reports.length})
               </button>
 
               <button
@@ -887,30 +875,20 @@ export default function App() {
 
         {activeTab === "dok-pendukung" && (
           <div className="space-y-6 animate-fade-in" id="dok-pendukung-tab-content">
-            <DokumenPendukungForm />
+            <DokumenPendukungForm reports={reports} />
           </div>
         )}
 
         {activeTab === "google-form" && (
           <div className="space-y-6 animate-fade-in" id="google-form-tab-content">
-            <GoogleFormIframe macroUrl={macroUrl} onMacroUrlChange={setMacroUrl} />
+            <GoogleFormIframe />
           </div>
         )}
 
         {activeTab === "spreadsheet" && (
           /* Interactive Spreadsheet Sheet Tab */
           <div className="space-y-6 animate-fade-in" id="spreadsheet-tab-content">
-            <SpreadsheetGrid
-              reports={reports}
-              onAddReport={handleAddReport}
-              onUpdateReport={handleUpdateReport}
-              onDeleteReport={handleDeleteReport}
-              onResetData={handleResetData}
-              isSyncing={isSyncingAll}
-              onSyncRow={handleSyncRow}
-              onSyncAll={handleSyncAll}
-              userEmail={userEmail}
-            />
+            <SpreadsheetGrid />
           </div>
         )}
 

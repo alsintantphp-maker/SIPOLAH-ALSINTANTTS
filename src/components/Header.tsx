@@ -241,14 +241,6 @@ export default function Header({
               <LayoutDashboard className="w-5 h-5" /> Ikhtisar & Optimasi AI
             </button>
             <button
-              onClick={() => { setActiveTab("input-manual"); setIsMobileMenuOpen(false); }}
-              className={`p-3 rounded-xl text-sm font-bold flex items-center gap-3 ${
-                activeTab === "input-manual" ? "bg-emerald-50 text-emerald-800" : "text-slate-600"
-              }`}
-            >
-              <ClipboardEdit className="w-5 h-5" /> Menu Input
-            </button>
-            <button
               onClick={() => { setActiveTab("dok-pendukung"); setIsMobileMenuOpen(false); }}
               className={`p-3 rounded-xl text-sm font-bold flex items-center gap-3 ${
                 activeTab === "dok-pendukung" ? "bg-emerald-50 text-emerald-800" : "text-slate-600"
@@ -262,7 +254,7 @@ export default function Header({
                 activeTab === "google-form" ? "bg-emerald-50 text-emerald-800" : "text-slate-600"
               }`}
             >
-              <FileText className="w-5 h-5" /> Input Google Form / Apps Script
+              <FileText className="w-5 h-5" /> Lapor Olah Lahan
             </button>
             <button
               onClick={() => { setActiveTab("spreadsheet"); setIsMobileMenuOpen(false); }}
@@ -270,7 +262,7 @@ export default function Header({
                 activeTab === "spreadsheet" ? "bg-emerald-50 text-emerald-800" : "text-slate-600"
               }`}
             >
-              <FileSpreadsheet className="w-5 h-5" /> Grid Google Sheets ({reportsLength})
+              <FileSpreadsheet className="w-5 h-5" /> Rekap Laporan Olah Lahan ({reportsLength})
             </button>
             <button
               onClick={() => { setActiveTab("hubungi-petugas"); setIsMobileMenuOpen(false); }}
